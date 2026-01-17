@@ -1,1 +1,1 @@
-# glai-frontend
+GLAI Frontend
