@@ -72,20 +72,36 @@ export default function ChatPage() {
   const handleSend = useCallback(async () => {
     const trimmedInput = input.trim();
     if ((!trimmedInput && selectedFiles.length === 0) || isTyping) return;
+    
     const userMessage: Message = { id: `user-${Date.now()}`, role: "user", text: trimmedInput || "Файл отправлен", timestamp: Date.now() };
-    setMessages(prev => [...prev, userMessage]);
+    const aiMessageId = `ai-${Date.now()}`;
+    const initialAiMessage: Message = { id: aiMessageId, role: "ai", text: "", timestamp: Date.now() };
+
+    setMessages(prev => [...prev, userMessage, initialAiMessage]);
     setInput(""); setSelectedFiles([]); setIsTyping(true);
+
     try {
-      const history = [...messages, userMessage].map(m => ({ role: m.role === "ai" ? "assistant" as const : "user" as const, content: m.text }));
-      await sendToAI({ messages: history }, (res) => {
-        setMessages(prev => [...prev, { id: `ai-${Date.now()}`, role: "ai", text: res, timestamp: Date.now() }]);
+      const history = [...messages, userMessage].map(m => ({ 
+        role: m.role === "ai" ? "assistant" as const : "user" as const, 
+        content: m.text 
+      }));
+
+      let accumulated = "";
+      await sendToAI({ messages: history }, (chunk) => {
+        accumulated += chunk;
+        setMessages(prev => prev.map(msg => 
+          msg.id === aiMessageId ? { ...msg, text: accumulated } : msg
+        ));
       });
     } catch {
-      setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: "ai", text: "Ошибка связи.", isError: true, timestamp: Date.now() }]);
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiMessageId ? { ...msg, text: "Ошибка связи.", isError: true } : msg
+      ));
     } finally { setIsTyping(false); }
   }, [input, isTyping, messages, selectedFiles]);
 
   const clearChat = () => { if (window.confirm("Очистить чат?")) { setMessages([{ id: "init", role: "ai", text: "Чат очищен.", timestamp: Date.now() }]); setShowActionMenu(false); } };
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) { setSelectedFiles(p => [...p, { name: file.name, url: URL.createObjectURL(file) }]); setShowActionMenu(false); }
@@ -117,7 +133,6 @@ export default function ChatPage() {
         background: `linear-gradient(to bottom, ${theme.bgBase} 40%, rgba(13, 27, 42, 0.5) 100%)`,
         borderBottom: "1px solid rgba(255, 255, 255, 0.05)"
       }}>
-        {/* Левая часть: Стрелка + Лого */}
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <div onClick={() => navigate("/")} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
@@ -130,7 +145,6 @@ export default function ChatPage() {
           </div>
         </div>
         
-        {/* Правая часть: Статус + Аватар */}
         <div onClick={() => setIsSubModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 10, fontWeight: 800, color: "white", opacity: 0.4, letterSpacing: "2px" }}>{mode?.toUpperCase()}</div>
@@ -140,7 +154,6 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Subscription Modal */}
       <AnimatePresence>
         {isSubModalOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
@@ -183,7 +196,7 @@ export default function ChatPage() {
             {selectedFiles.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} style={{ display: "flex", gap: "12px", marginBottom: "15px" }}>
                 {selectedFiles.map((f, i) => (
-                  <div key={i} className="file-preview"><img src={f.url} /><div className="file-remove" onClick={() => setSelectedFiles(p => p.filter((_, idx) => idx !== i))}>×</div></div>
+                  <div key={i} className="file-preview"><img src={f.url} alt="" /><div className="file-remove" onClick={() => setSelectedFiles(p => p.filter((_, idx) => idx !== i))}>×</div></div>
                 ))}
               </motion.div>
             )}

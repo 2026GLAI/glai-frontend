@@ -1,47 +1,76 @@
 import type { AIRequest, AIStreamHandler } from "./types";
 
-const API_URL = "https://glai-core-production.up.railway.app/chat";
+const API_URL = import.meta.env.VITE_API_URL || "https://glai-core-production.up.railway.app/chat";
 
 /**
- * ТРАНСПОРТНЫЙ УРОВЕНЬ
- * Работает в режиме Request-Response. Ожидает полного ответа от Railway.
+ * ПРОФЕССИОНАЛЬНЫЙ ТРАНСПОРТНЫЙ УРОВЕНЬ
+ * Чистит поток от технических префиксов OpenAI и передает только текст.
  */
 export async function realTransport(
   request: AIRequest,
   onChunk: AIStreamHandler
 ): Promise<void> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // Увеличил до 60 сек для длинных ответов
+
   try {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "text/event-stream",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         messages: request.messages,
+        stream: true,
       }),
     });
 
-    // 1. Проверка на системные ошибки (404, 500, и т.д.)
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "Unknown error");
-      throw new Error(`Server error (${response.status}): ${errorText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Server error ${response.status}`);
     }
 
-    // 2. Ожидание полного JSON от бэкенда
-    const data = await response.json();
+    if (!response.body) throw new Error("Response body is null");
 
-    // 3. Извлечение контента (поддержка разных форматов ответа)
-    const content = data?.content || data?.message;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    if (content) {
-      onChunk(content);
-      return;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      
+      // ПАРСИНГ SSE: разбиваем полученные данные на строки
+      const lines = chunk.split("\n");
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "data: [DONE]") continue;
+
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const jsonString = trimmed.replace("data: ", "");
+            const parsed = JSON.parse(jsonString);
+            const content = parsed.choices?.[0]?.delta?.content || "";
+            if (content) onChunk(content);
+          } catch (e) {
+            // Если это не JSON, а чистый текст (зависит от настроек бэкенда)
+            onChunk(trimmed.replace("data: ", ""));
+          }
+        }
+      }
     }
 
-    throw new Error("Invalid backend response: No content found");
-  } catch (error) {
-    // Пробрасываем ошибку выше для обработки в UI (ChatPage)
-    console.error("AI Transport Error:", error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error("Request timed out");
+    }
+    console.error("Critical Transport Error:", error);
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

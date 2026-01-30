@@ -1,57 +1,79 @@
 // src/memory/sessionMemory.ts
 
+export type Message = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
+
 export type SessionData = {
+  messages: Message[];
   name?: string;
   style?: string;
   mode?: 'daily' | 'travel';
   updatedAt: number;
 };
 
-const SESSION_TTL_MS = 30 * 60 * 1000; // 30 минут
+const SESSION_KEY_PREFIX = 'glai_session_';
+const SESSION_TTL_MS = 30 * 60 * 1000;
 
-const sessions = new Map<string, SessionData>();
-
+/**
+ * Синхронизированное получение сессии (LocalStorage + TTL)
+ */
 export function getSession(sessionId: string): SessionData {
   const now = Date.now();
-
-  const existing = sessions.get(sessionId);
-
-  if (!existing) {
-    const fresh: SessionData = { updatedAt: now };
-    sessions.set(sessionId, fresh);
-    return fresh;
+  const raw = localStorage.getItem(`${SESSION_KEY_PREFIX}${sessionId}`);
+  
+  if (raw) {
+    try {
+      const session: SessionData = JSON.parse(raw);
+      if (now - session.updatedAt < SESSION_TTL_MS) {
+        return session;
+      }
+    } catch (e) {
+      console.error("Failed to parse session", e);
+    }
   }
 
-  // TTL check
-  if (now - existing.updatedAt > SESSION_TTL_MS) {
-    const fresh: SessionData = { updatedAt: now };
-    sessions.set(sessionId, fresh);
-    return fresh;
-  }
-
-  return existing;
+  const fresh: SessionData = {
+    messages: [],
+    updatedAt: now,
+  };
+  saveSession(sessionId, fresh);
+  return fresh;
 }
 
 export function updateSession(
   sessionId: string,
   patch: Partial<Omit<SessionData, 'updatedAt'>>
 ): void {
-  const session = getSession(sessionId);
-
-  sessions.set(sessionId, {
-    ...session,
+  const current = getSession(sessionId);
+  const updated: SessionData = {
+    ...current,
     ...patch,
     updatedAt: Date.now(),
-  });
+  };
+  saveSession(sessionId, updated);
 }
 
-// 🧹 Автоочистка старых сессий
-setInterval(() => {
-  const now = Date.now();
+function saveSession(sessionId: string, data: SessionData): void {
+  localStorage.setItem(`${SESSION_KEY_PREFIX}${sessionId}`, JSON.stringify(data));
+}
 
-  for (const [id, session] of sessions.entries()) {
-    if (now - session.updatedAt > SESSION_TTL_MS) {
-      sessions.delete(id);
+/**
+ * Очистка устаревших данных (вызывать при инициализации App)
+ */
+export function purgeOldSessions(): void {
+  const now = Date.now();
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith(SESSION_KEY_PREFIX)) {
+      try {
+        const session: SessionData = JSON.parse(localStorage.getItem(key) || '');
+        if (now - session.updatedAt > SESSION_TTL_MS) {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
     }
-  }
-}, 60 * 1000); // проверка раз в минуту
+  });
+}
