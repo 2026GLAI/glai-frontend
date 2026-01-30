@@ -1,6 +1,8 @@
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useVisualViewport } from "../hooks/useVisualViewport";
+import { motion, AnimatePresence } from "framer-motion";
+
+type Plan = "free" | "plus" | "pro";
 
 const OwlIcon = ({ size, color = "white" }: { size: number | string, color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 43349.2 43349.2" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -10,83 +12,193 @@ const OwlIcon = ({ size, color = "white" }: { size: number | string, color?: str
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { height, offsetTop } = useVisualViewport();
-  const isDarkMode = new Date().getHours() < 7 || new Date().getHours() >= 19;
+  const [currentPlan, setCurrentPlan] = useState<Plan>(() => (localStorage.getItem("glai_plan") as Plan) || "free");
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const theme = {
-    bgBase: isDarkMode ? "#0D1B2A" : "#D1B2A0",
-    bgInner: isDarkMode ? "#1B263B" : "#E2C9B8",
-    proColor: "#D4AF37",
-    white: "#FFFFFF",
+  const theme = useMemo(() => ({
+    bgBase: "#0D1B2A", bgInner: "#1B263B",
+    freeColor: "#8E9AAF", plusColor: "#00B4FF", proColor: "#D4AF37",
+    glassBorder: "rgba(255, 255, 255, 0.12)"
+  }), []);
+
+  const aiAccentColor = useMemo(() => {
+    if (currentPlan === "pro") return theme.proColor;
+    if (currentPlan === "plus") return theme.plusColor;
+    return theme.freeColor;
+  }, [currentPlan, theme]);
+
+  const savePlan = (plan: Plan) => {
+    setCurrentPlan(plan);
+    localStorage.setItem("glai_plan", plan);
+    setIsSubModalOpen(false);
   };
 
   return (
     <main style={{
-      position: "fixed", top: 0, left: 0, width: "100%", height: `${height}px`,
-      transform: `translateY(${offsetTop}px)`, overflow: "hidden",
-      background: `radial-gradient(circle at 50% 40%, ${theme.bgInner} 0%, ${theme.bgBase} 100%)`,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
+      width: "100vw", height: "100vh", overflow: "hidden",
+      background: `radial-gradient(circle at 50% 20%, ${theme.bgInner} 0%, ${theme.bgBase} 100%)`,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between"
     }}>
       <style>{`
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes aiBreath { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        @keyframes pulseGold { 
-          0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); } 
-          70% { box-shadow: 0 0 0 16px rgba(212, 175, 55, 0); } 
-          100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); } 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;900&display=swap');
+        
+        @keyframes avatarPulseHome {
+          0% { box-shadow: 0 0 0 0px ${aiAccentColor}44; }
+          70% { box-shadow: 0 0 0 20px ${aiAccentColor}00; }
+          100% { box-shadow: 0 0 0 0px ${aiAccentColor}00; }
         }
-        .animate-fade { opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
-        .status-pro { border: 3px solid ${theme.proColor}; animation: pulseGold 2s infinite; }
-        .ai-accent { color: ${theme.proColor}; animation: aiBreath 3s ease-in-out infinite; }
+        @keyframes pulseA {
+          0%, 100% { box-shadow: 0 0 8px rgba(0, 180, 255, 0.15); border-color: rgba(0, 180, 255, 0.25); }
+          50% { box-shadow: 0 0 28px rgba(0, 180, 255, 0.55); border-color: rgba(0, 180, 255, 0.85); }
+        }
+        @keyframes pulseB {
+          0%, 100% { box-shadow: 0 0 28px ${aiAccentColor}55; border-color: ${aiAccentColor}99; }
+          50% { box-shadow: 0 0 8px ${aiAccentColor}11; border-color: ${aiAccentColor}22; }
+        }
+        @keyframes pulseFreeB {
+          0%, 100% { box-shadow: 0 0 15px rgba(142, 154, 175, 0.35); border-color: rgba(142, 154, 175, 0.45); }
+          50% { box-shadow: 0 0 4px rgba(142, 154, 175, 0.1); border-color: rgba(142, 154, 175, 0.15); }
+        }
+        .avatar-home-pulse { animation: avatarPulseHome 2.5s infinite; }
+        .mode-card:active { transform: scale(0.96); }
+        .pulse-hellas-swing { animation: pulseA 4s infinite ease-in-out; }
+        .pulse-dynamic-swing { animation: pulseB 4s infinite ease-in-out; }
+        .pulse-free-swing { animation: pulseFreeB 4s infinite ease-in-out; }
+        .logo-glow { filter: drop-shadow(0 0 10px ${aiAccentColor}66); }
+        
+        .vertical-menu-trigger {
+          position: fixed; left: 30px; top: 50%; transform: translateY(-50%) rotate(-90deg);
+          transform-origin: left center; cursor: pointer; display: flex; alignItems: center; gap: 20px;
+          z-index: 100; transition: all 0.3s ease;
+        }
+        .vertical-menu-trigger:hover { color: ${aiAccentColor} !important; }
+        .vertical-line { width: 40px; height: 1px; background: white; opacity: 0.3; transition: all 0.3s; }
+        .vertical-menu-trigger:hover .vertical-line { width: 60px; background: ${aiAccentColor}; opacity: 1; }
       `}</style>
 
-      {/* HEADER */}
-      <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.8 }}
-        style={{
-          position: "absolute", top: "calc(30px + env(safe-area-inset-top))", left: 35, right: 35,
-          display: "flex", justifyContent: "space-between", alignItems: "center"
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: theme.white, letterSpacing: "6px" }}>
-            GL<span className="ai-accent" style={{ fontWeight: 400 }}>Ai</span>
-          </div>
-          <div style={{ width: "32px", height: "2px", backgroundColor: theme.white, opacity: 0.3 }} />
+      {/* Вертикальный триггер МЕНЮ */}
+      <div className="vertical-menu-trigger" onClick={() => setIsMenuOpen(true)}>
+        <span style={{ color: "white", fontSize: "11px", fontWeight: 900, letterSpacing: "5px", textTransform: "uppercase" }}>Инфо</span>
+        <div className="vertical-line" />
+      </div>
+
+      {/* Header */}
+      <header style={{ width: "100%", padding: "40px 30px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", zIndex: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+           <div className="logo-glow"><OwlIcon size="42px" color={aiAccentColor} /></div>
+           <div style={{ width: "2px", height: "30px", background: `linear-gradient(to bottom, transparent, ${aiAccentColor}, transparent)`, opacity: 0.6 }} />
+           <div style={{ fontSize: 24, fontWeight: 950, color: "white", letterSpacing: "6px" }}>
+             GL<span style={{ color: aiAccentColor, fontWeight: 400 }}>Ai</span>
+           </div>
         </div>
-        <div className="status-pro" style={{ width: 46, height: 46, borderRadius: "50%", background: "#1a1a1a" }} />
-      </motion.header>
-      
-      {/* ЦЕНТРАЛЬНАЯ СОВА */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 10 }}>
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4, duration: 1 }}
-          style={{ marginBottom: 44 }}
-        >
-          <OwlIcon size="clamp(130px, 35vw, 170px)" />
-        </motion.div>
         
-        <div style={{ display: "flex", flexDirection: "column", gap: 24, width: "min(380px, 92vw)" }}>
-          <button className="animate-fade" onClick={() => navigate("/chat/hellas")} style={{ 
-            height: 62, backgroundColor: "#005BAE", color: theme.white, border: "none", 
-            borderRadius: 18, fontSize: 19, fontWeight: 800, animationDelay: "0.4s", cursor: "pointer"
+        <div onClick={() => setIsSubModalOpen(true)} style={{ display: "flex", alignItems: "center", gap: "20px", cursor: "pointer" }}>
+           <div style={{ textAlign: "right" }}>
+             <div style={{ fontSize: 14, fontWeight: 900, color: "white", opacity: 0.8, letterSpacing: "4px", marginBottom: "4px" }}>CORE</div>
+             <div style={{ fontSize: 16, fontWeight: 950, color: aiAccentColor, letterSpacing: "2.5px" }}>{currentPlan.toUpperCase()}</div>
+           </div>
+           <div className="avatar-home-pulse" style={{ width: 52, height: 52, borderRadius: "50%", border: `3px solid ${aiAccentColor}`, background: "#1a1a1a" }} />
+        </div>
+      </header>
+
+      {/* Side Menu Drawer (Left) */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(15px)", zIndex: 1000 }} />
+            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "spring", damping: 30, stiffness: 200 }} style={{
+              position: "fixed", left: 0, top: 0, height: "100vh", width: "100%", maxWidth: "550px",
+              background: "#080E15", borderRight: `1px solid ${theme.glassBorder}`, zIndex: 1001,
+              padding: "80px 60px", overflowY: "auto", boxShadow: "20px 0 60px rgba(0,0,0,0.6)"
+            }}>
+              <div onClick={() => setIsMenuOpen(false)} style={{ position: "absolute", top: 40, right: 40, cursor: "pointer", color: "white", fontSize: "32px", fontWeight: 100 }}>×</div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "60px" }}>
+                <section>
+                  <div style={{ fontSize: "11px", color: aiAccentColor, fontWeight: 900, letterSpacing: "6px", marginBottom: "20px" }}>ETHOS</div>
+                  <h2 style={{ color: "white", fontSize: "42px", fontWeight: 200, marginBottom: "35px", lineHeight: 1.1 }}>Наследие <br/>Мудрости</h2>
+                  <div style={{ fontFamily: 'Inter', fontWeight: 200, color: "#FFFFFF", lineHeight: 2, fontSize: "16px" }}>
+                    <p style={{ marginBottom: "30px" }}>
+                      Название <span style={{ color: aiAccentColor, fontWeight: 400 }}>GLAi</span> — это симбиоз прошлого и будущего. 
+                      Корни уходят в <strong style={{ fontWeight: 400 }}>γλαύξ</strong> (Glaux) — античное имя совы, хранительницы знаний Афины.
+                    </p>
+                    <p>
+                      Мы соединили этот «Золотой фундамент» мудрости с передовыми технологиями <span style={{ color: aiAccentColor }}>Artificial Intelligence</span>.
+                    </p>
+                  </div>
+                </section>
+                <nav style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
+                  <div style={{ fontSize: "11px", color: aiAccentColor, fontWeight: 900, letterSpacing: "6px" }}>МЕНЮ</div>
+                  {["ФИЛОСОФИЯ ПРОЕКТА", "ТЕХНОЛОГИЧЕСКИЙ СТЕК", "ГРЕЦИЯ И ИННОВАЦИИ", "БЕЗОПАСНОСТЬ ДАННЫХ", "КОНТАКТЫ"].map((item) => (
+                    <div key={item} style={{ color: "white", fontSize: "18px", fontWeight: 200, letterSpacing: "3px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: "12px" }}>{item}</div>
+                  ))}
+                </nav>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Hero Section */}
+      <div style={{ textAlign: "center", width: "100%", maxWidth: "450px", padding: "0 20px" }}>
+        <h1 style={{ color: "white", fontSize: "42px", fontWeight: 950, marginBottom: "15px", letterSpacing: "-1.5px" }}>Начните работу</h1>
+        <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: "55px", fontSize: "18px", fontWeight: 300 }}>Активируйте когнитивный контур системы</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* HELLAS */}
+          <div className="mode-card pulse-hellas-swing" onClick={() => navigate("/chat/hellas")} style={{
+            background: "rgba(255,255,255,0.02)", padding: "32px", borderRadius: "30px", border: "1px solid rgba(0, 180, 255, 0.25)",
+            cursor: "pointer", textAlign: "left"
           }}>
-            GL<span style={{ color: theme.proColor, fontWeight: 400 }}>Ai</span> HELLAS
-          </button>
-          
-          <button className="animate-fade" onClick={() => navigate("/chat/global")} style={{ 
-            height: 62, background: "rgba(255,255,255,0.05)", color: theme.white, 
-            border: "1.5px solid rgba(255,255,255,0.2)", borderRadius: 18, fontSize: 19, fontWeight: 800, 
-            animationDelay: "0.6s", cursor: "pointer", backdropFilter: "blur(5px)"
+            <div style={{ fontSize: 24, fontWeight: 950, color: "white", marginBottom: "8px", letterSpacing: "5px" }}>
+              GL<span style={{ color: theme.plusColor, fontWeight: 400 }}>Ai</span> HELLAS
+            </div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", fontWeight: 300 }}>Специализированный контур для Греции</div>
+          </div>
+
+          {/* GLOBAL */}
+          <div className={`mode-card ${currentPlan === 'plus' ? 'pulse-plus-swing' : currentPlan === 'pro' ? 'pulse-pro-swing' : 'pulse-free-swing'}`} onClick={() => navigate("/chat/global")} style={{
+            background: "rgba(255,255,255,0.02)", padding: "32px", borderRadius: "30px", 
+            border: currentPlan === 'free' ? "1px solid rgba(142, 154, 175, 0.25)" : `1px solid ${aiAccentColor}44`,
+            cursor: "pointer", textAlign: "left"
           }}>
-            GL<span style={{ color: theme.proColor, fontWeight: 400 }}>Ai</span> GLOBAL
-          </button>
+            <div style={{ fontSize: 24, fontWeight: 950, color: "white", marginBottom: "8px", letterSpacing: "5px" }}>
+              GL<span style={{ color: aiAccentColor, fontWeight: 400 }}>Ai</span> GLOBAL
+            </div>
+            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", fontWeight: 300 }}>Универсальный интеллект для любых задач</div>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer style={{ width: "100%", paddingBottom: "45px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ width: "90px", height: "3px", background: aiAccentColor, borderRadius: "3px", marginBottom: "25px", opacity: 0.5 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "rgba(255,255,255,0.25)", fontSize: "11px", fontWeight: 900, letterSpacing: "3px", textTransform: "uppercase" }}>
+          <span>© 2026 GLAi</span>
+          <span style={{ width: "1px", height: "12px", background: "rgba(255,255,255,0.1)" }} />
+          <span style={{ color: aiAccentColor, opacity: 0.75 }}>GLAI.GR</span>
+        </div>
+      </footer>
+
+      {/* Subscription Modal */}
+      <AnimatePresence>
+        {isSubModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} style={{ background: theme.bgInner, width: "100%", maxWidth: "420px", borderRadius: "40px", padding: "40px", border: `1px solid ${theme.glassBorder}` }}>
+              <h2 style={{ color: "white", marginBottom: "30px", textAlign: "center", fontSize: "26px", fontWeight: 950 }}>Тарифный план</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                {(["free", "plus", "pro"] as Plan[]).map(p => (
+                  <div key={p} onClick={() => savePlan(p)} style={{ padding: "24px", borderRadius: "24px", border: `2px solid ${currentPlan === p ? (theme as any)[p+'Color'] : "rgba(255,255,255,0.05)"}`, cursor: "pointer", background: currentPlan === p ? `${(theme as any)[p+'Color']}15` : "transparent" }}>
+                    <div style={{ color: (theme as any)[p+'Color'], fontWeight: 950, fontSize: 18, letterSpacing: "2px" }}>{p.toUpperCase()}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setIsSubModalOpen(false)} style={{ width: "100%", marginTop: "35px", padding: "20px", borderRadius: "20px", background: "white", color: "black", border: "none", fontWeight: 950, fontSize: 16 }}>Закрыть</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
