@@ -1,10 +1,10 @@
-import { AIRequest, AIStreamHandler } from "./types";
+import type { AIRequest, AIStreamHandler } from "./types";
 
 const MOCK_RESPONSE =
   "Γεια σου! Είμαι ο GLAi. Μπορώ να σε βοηθήσω με την Ελλάδα, ταξίδια και καθημερινή ζωή.";
 
 export async function mockTransport(
-  request: AIRequest,
+  _request: AIRequest,
   onChunk: AIStreamHandler
 ) {
   // имитация streaming
