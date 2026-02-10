@@ -1,26 +1,17 @@
-// role в сообщении
-export type AIRole = "system" | "user" | "assistant";
-
-// одно сообщение диалога
-export interface AIMessage {
-  role: AIRole;
+export interface Message {
+  role: "system" | "user" | "ai";
   content: string;
 }
 
-// запрос к AI
 export interface AIRequest {
-  messages: AIMessage[];
-  locale?: string;        // "el", "en", etc
-  temperature?: number;  // optional
+  messages: Message[];
+  // Добавляем опциональное поле mode
+  mode?: string;
 }
 
-// streaming handler
 export type AIStreamHandler = (chunk: string) => void;
 
-// transport interface (НЕ экспортируем наружу)
-export interface AITransport {
-  (
-    request: AIRequest,
-    onChunk: AIStreamHandler
-  ): Promise<void>;
+export interface AIResponseChunk {
+  content: string;
+  done: boolean;
 }

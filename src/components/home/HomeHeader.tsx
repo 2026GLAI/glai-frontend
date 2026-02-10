@@ -1,5 +1,15 @@
 import { memo } from "react";
-import OwlIcon from "../OwlIcon";
+import OwlIcon from "./OwlIcon";
+
+// Импорт аватаров из сейфов
+import { FreeAvatar } from "./UserAvatar/FreePlan/FreeAvatar";
+import { PlusAvatar } from "./UserAvatar/PlusPlan/PlusAvatar";
+import { ProAvatar } from "./UserAvatar/ProPlan/ProAvatar";
+
+// Импорт лимитов из сейфов
+import { FreeQuota } from "./UserAvatar/FreeQuota/FreeQuota";
+import { PlusQuota } from "./UserAvatar/PlusQuota/PlusQuota";
+import { ProQuota } from "./UserAvatar/ProQuota/ProQuota";
 
 type Plan = "free" | "plus" | "pro";
 
@@ -9,6 +19,10 @@ interface HomeHeaderProps {
   onPlanClick: () => void;
 }
 
+/**
+ * HOME HEADER
+ * Дирижер верхней панели системы GLAi.
+ */
 export const HomeHeader = memo(({ currentPlan, accentColor, onPlanClick }: HomeHeaderProps) => {
   return (
     <header
@@ -21,6 +35,7 @@ export const HomeHeader = memo(({ currentPlan, accentColor, onPlanClick }: HomeH
         zIndex: 10
       }}
     >
+      {/* ЛЕВАЯ ЧАСТЬ: ЛОГОТИП */}
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div style={{ filter: `drop-shadow(0 0 10px ${accentColor}66)` }}>
           <OwlIcon size="42px" color={accentColor} />
@@ -31,7 +46,7 @@ export const HomeHeader = memo(({ currentPlan, accentColor, onPlanClick }: HomeH
             width: "2px",
             height: "30px",
             background: `linear-gradient(to bottom, transparent, ${accentColor}, transparent)`,
-            opacity: 0.6
+            opacity: 0.4
           }}
         />
 
@@ -40,44 +55,33 @@ export const HomeHeader = memo(({ currentPlan, accentColor, onPlanClick }: HomeH
         </div>
       </div>
 
+      {/* ПРАВАЯ ЧАСТЬ: ИНФОРМАЦИЯ И АВАТАР */}
       <div
         onClick={onPlanClick}
-        style={{ display: "flex", alignItems: "center", gap: "20px", cursor: "pointer" }}
+        style={{ display: "flex", alignItems: "center", gap: "25px", cursor: "pointer" }}
       >
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 900,
-              color: "white",
-              opacity: 0.8,
-              letterSpacing: "4px",
-              marginBottom: "4px"
-            }}
-          >
+        {/* ЛИМИТЫ (QUOTA SAFE) */}
+        <div style={{ textAlign: "right", minWidth: "120px" }}>
+          <div style={{ fontSize: 12, fontWeight: 900, color: "white", opacity: 0.6, letterSpacing: "4px", marginBottom: "2px" }}>
             CORE
           </div>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 950,
-              color: accentColor,
-              letterSpacing: "2.5px"
-            }}
-          >
+          <div style={{ fontSize: 14, fontWeight: 950, color: accentColor, letterSpacing: "2.5px" }}>
             {currentPlan.toUpperCase()}
+          </div>
+          
+          <div style={{ width: "100%" }}>
+            {currentPlan === "free" && <FreeQuota current={45} max={100} color={accentColor} />}
+            {currentPlan === "plus" && <PlusQuota current={850} max={1000} color={accentColor} />}
+            {currentPlan === "pro" && <ProQuota color={accentColor} />}
           </div>
         </div>
 
-        <div
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: "50%",
-            border: `3px solid ${accentColor}`,
-            background: "#1a1a1a"
-          }}
-        />
+        {/* АВАТАР (AVATAR SAFE) */}
+        <div style={{ position: "relative" }}>
+          {currentPlan === "free" && <FreeAvatar onClick={onPlanClick} />}
+          {currentPlan === "plus" && <PlusAvatar onClick={onPlanClick} accentColor={accentColor} />}
+          {currentPlan === "pro" && <ProAvatar onClick={onPlanClick} accentColor={accentColor} />}
+        </div>
       </div>
     </header>
   );

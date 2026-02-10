@@ -10,19 +10,23 @@ export function useVisualViewport() {
     if (!window.visualViewport) return;
 
     const handleVisualUpdate = () => {
-      // Ключевой момент: берем высоту именно ВИДИМОЙ области
+      // Берем высоту именно ВИДИМОЙ области
       const vv = window.visualViewport!;
       setViewport({
         height: vv.height,
         offsetTop: vv.offsetTop,
       });
 
-      // Жестко прижимаем страницу к верху при каждом изменении
+      // Задача №1: Жестко прижимаем страницу к верху при каждом изменении вьюпорта
+      // Это предотвращает появление серой полосы после закрытия клавиатуры
       window.scrollTo(0, 0);
     };
 
     window.visualViewport.addEventListener("resize", handleVisualUpdate);
     window.visualViewport.addEventListener("scroll", handleVisualUpdate);
+
+    // Первичный вызов для калибровки при монтировании
+    handleVisualUpdate();
 
     return () => {
       window.visualViewport?.removeEventListener("resize", handleVisualUpdate);

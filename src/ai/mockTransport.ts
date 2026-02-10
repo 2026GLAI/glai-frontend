@@ -1,15 +1,21 @@
 import type { AIRequest, AIStreamHandler } from "./types";
 
-const MOCK_RESPONSE =
-  "Γεια σου! Είμαι ο GLAi. Μπορώ να σε βοηθήσω με την Ελλάδα, ταξίδια και καθημερινή ζωή.";
-
+/**
+ * ТЕСТОВЫЙ ТРАНСПОРТ (MOCK)
+ * Используется для отладки интерфейса без реальных запросов к Railway.
+ */
 export async function mockTransport(
-  _request: AIRequest,
+  request: AIRequest,
   onChunk: AIStreamHandler
-) {
-  // имитация streaming
-  for (let i = 0; i < MOCK_RESPONSE.length; i++) {
-    await new Promise((r) => setTimeout(r, 20));
-    onChunk(MOCK_RESPONSE[i]);
+): Promise<void> {
+  const mode = request.mode || "core";
+  const mockText = `[MOCK RESPONSE - MODE: ${mode.toUpperCase()}] Я получил ваш запрос и готов помочь. Это тестовый поток данных для проверки стабильности интерфейса.`;
+  
+  const words = mockText.split(" ");
+  
+  for (const word of words) {
+    // Имитация задержки сети
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    onChunk(word + " ");
   }
 }
