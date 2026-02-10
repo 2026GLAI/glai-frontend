@@ -54,7 +54,7 @@ export default function HomePage() {
           50% { opacity: 0.7; filter: drop-shadow(0 0 8px ${aiAccentColor}); }
         }
         .ai-pulse-text { animation: aiTextPulse 3s infinite ease-in-out; color: ${aiAccentColor}; font-weight: 400; }
-        .avatar-home-pulse { animation: avatarPulseHome 2s infinite ease-in-out; border: 2px solid ${aiAccentColor} !important; }
+        .avatar-home-pulse { animation: avatarPulseHome 2.5s infinite ease-in-out; border: 2px solid ${aiAccentColor} !important; }
         .mobile-info-btn {
           display: none; position: fixed; left: 20px; bottom: calc(30px + env(safe-area-inset-bottom)); 
           width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.08);
@@ -81,7 +81,12 @@ export default function HomePage() {
       </div>
 
       <AnimatePresence>
-        {isMenuOpen && <SideMenu onClose={() => setIsMenuOpen(false)} />}
+        {isMenuOpen && (
+          <SideMenu 
+            onClose={() => setIsMenuOpen(false)} 
+            /* accentColor удален, так как SideMenu берет его из usePlan() */
+          />
+        )}
       </AnimatePresence>
 
       <header translate="no" style={styles.header} className="main-header">
