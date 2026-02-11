@@ -12,7 +12,6 @@ export const HomeHeader: React.FC<Props> = ({ onAvatarClick }) => {
   return (
     <header translate="no" style={{
       width: "100%",
-      // 32px сверху для идеального выравнивания с центром совы в сайдбаре
       padding: "32px 40px 32px 110px", 
       display: "flex", 
       justifyContent: "space-between", 
@@ -20,38 +19,34 @@ export const HomeHeader: React.FC<Props> = ({ onAvatarClick }) => {
       zIndex: 10, 
       boxSizing: "border-box"
     }}>
-      {/* Контейнер логотипа */}
       <div style={{ display: "flex", alignItems: "baseline", height: "32px" }}>
         <div style={{ 
           display: "flex",
           alignItems: "baseline",
-          fontSize: "26px", // Чуть крупнее для солидности
-          letterSpacing: "-0.5px", // Отрицательный кернинг для премиального вида
+          fontSize: "22px", 
+          // УВЕЛИЧЕННОЕ РАССТОЯНИЕ: создаем "воздух" бренда
+          letterSpacing: "0.15em", 
           lineHeight: "1",
           cursor: "default",
-          userSelect: "none"
+          userSelect: "none",
+          // Добавляем современный гротескный шрифт
+          fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         }}>
-          {/* Массивный GL */}
           <span style={{ 
-            fontWeight: 950, // Максимальный вес
+            fontWeight: 800, 
             color: "white",
             textTransform: "uppercase"
           }}>
             GL
           </span>
 
-          {/* Технологичный Ai */}
           <span 
             className="ai-pulse-text" 
             style={{ 
               color: aiAccentColor,
-              fontWeight: 300, // Контрастная легкость
-              marginLeft: "1px",
-              // Тень создает эффект неоновой трубки
-              textShadow: `
-                0 0 10px ${aiAccentColor}66,
-                0 0 20px ${aiAccentColor}33
-              `
+              fontWeight: 200, // Еще более тонкий для контраста
+              marginLeft: "4px", // Небольшой зазор между GL и Ai
+              textShadow: `0 0 15px ${aiAccentColor}44`
             }}
           >
             Ai
@@ -59,7 +54,6 @@ export const HomeHeader: React.FC<Props> = ({ onAvatarClick }) => {
         </div>
       </div>
       
-      {/* Правая часть: Аватар */}
       <div style={{ display: "flex", alignItems: "center" }}>
         <Avatar onClick={onAvatarClick} />
       </div>

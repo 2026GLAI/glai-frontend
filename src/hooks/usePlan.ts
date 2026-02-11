@@ -7,7 +7,7 @@ export const usePlan = () => {
     () => (localStorage.getItem("glai_plan") as Plan) || "free"
   );
 
-  // СЛУШАТЕЛЬ ОБНОВЛЕНИЙ: заставляет Avatar перерисоваться
+  // СЛУШАТЕЛЬ ОБНОВЛЕНИЙ: заставляет все компоненты перерисоваться мгновенно
   useEffect(() => {
     const syncPlan = () => {
       const saved = (localStorage.getItem("glai_plan") as Plan) || "free";
@@ -19,14 +19,18 @@ export const usePlan = () => {
   }, []);
 
   const theme = useMemo(() => ({
-    bgBase: "#0D1B2A", 
-    bgInner: "#1B263B",
-    freeColor: "#007BFF", // Насыщенный синий для вашего аватара
+    // НОВЫЙ ПРЕСТИЖНЫЙ ФОН
+    bgBase: "#0D121F", 
+    // СКОРРЕКТИРОВАННЫЙ ВНУТРЕННИЙ ЦВЕТ (для слоев и карточек)
+    bgInner: "#161B2E",
+    
+    freeColor: "#007BFF", // Насыщенный синий
     plusColor: "#00B4FF", 
-    proColor: "#FFD700",  // Насыщенное золото для вашего аватара
-    aiText: "#C9D1D9",
+    proColor: "#FFD700",  // Насыщенное золото
+    
+    aiText: "#C9D1D9",    // Оптимальный контраст для чтения
     errColor: "#FF4D4D",
-    glassBorder: "rgba(255, 255, 255, 0.12)"
+    glassBorder: "rgba(255, 255, 255, 0.08)"
   }), []);
 
   const aiAccentColor = useMemo(() => {
@@ -38,7 +42,7 @@ export const usePlan = () => {
   const savePlan = (plan: Plan) => {
     localStorage.setItem("glai_plan", plan);
     setCurrentPlan(plan);
-    // СИГНАЛ: Говорим аватару, что пора менять цвет
+    // Глобальное уведомление системы о смене плана
     window.dispatchEvent(new Event("glai_plan_updated"));
   };
 

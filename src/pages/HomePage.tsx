@@ -29,15 +29,18 @@ export default function HomePage() {
 
   return (
     <main style={{
-      width: "100vw", height: "100vh", minHeight: "100dvh", background: theme.bgBase,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
-      position: "relative", overflow: "hidden"
+      width: "100vw", 
+      height: "100vh", 
+      minHeight: "100dvh", 
+      background: theme.bgBase, // Тот самый чистый #0D121F
+      display: "flex", 
+      flexDirection: "column", 
+      alignItems: "center", 
+      justifyContent: "space-between",
+      position: "relative", 
+      overflow: "hidden"
     }}>
-      <div style={{
-        position: "absolute", top: "40%", left: "50%", transform: "translate(-50%, -50%)",
-        width: "80vw", height: "80vw", background: `radial-gradient(circle, ${activeAccentColor}08 0%, transparent 65%)`,
-        zIndex: 1, pointerEvents: "none", filter: "blur(100px)"
-      }} />
+      {/* УДАЛЕНО: Блок с radial-gradient, который создавал "блики" и "грязь" */}
       
       <style>{`
         body { margin: 0; padding: 0; background: ${theme.bgBase}; -webkit-font-smoothing: antialiased; }
@@ -48,12 +51,12 @@ export default function HomePage() {
         .ai-pulse-text { 
           animation: aiTextPulse 4s infinite ease-in-out; 
           color: ${activeAccentColor} !important; 
-          font-weight: 950;
+          font-weight: 200;
+          letter-spacing: 0.15em;
           transition: color 0.4s ease;
         }
       `}</style>
 
-      {/* ИСПРАВЛЕННЫЙ БЛОК: Sidebar теперь соответствует новым SidebarProps */}
       <div className="desktop-sidebar" style={{ zIndex: 20 }}>
         <Sidebar onMenuClick={() => setIsMenuOpen(true)} />
       </div>

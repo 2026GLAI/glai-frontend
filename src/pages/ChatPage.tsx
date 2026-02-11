@@ -1,218 +1,204 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Импорт SDK
 import { usePlan } from "../hooks/usePlan";
-import { SideMenu } from "../components/home/SideMenu";
+import type { Plan } from "../hooks/usePlan";
 import { Sidebar } from "../components/home/Sidebar";
-import { sendToAI } from "../ai/aiClient";
-import type { Message } from "../ai/types";
-
-// ─── Markdown рендерер ───────────────────────────────────────────────────────
-function renderMarkdown(text: string): string {
-  return text
-    .replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:0.9em;font-family:monospace">$1</code>')
-    .replace(/^### (.*$)/gm, '<h3 style="color:white;font-size:15px;font-weight:800;margin:20px 0 8px;letter-spacing:0.5px">$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2 style="color:white;font-size:17px;font-weight:900;margin:24px 0 10px;letter-spacing:0.5px">$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1 style="color:white;font-size:20px;font-weight:950;margin:24px 0 12px">$1</h1>')
-    .replace(/^\d+\. (.*$)/gm, '<div style="display:flex;gap:10px;margin:5px 0"><span style="opacity:0.4;min-width:18px">•</span><span>$1</span></div>')
-    .replace(/^[-*] (.*$)/gm, '<div style="display:flex;gap:10px;margin:5px 0"><span style="opacity:0.4;min-width:18px">–</span><span>$1</span></div>')
-    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:166px 0">')
-    .replace(/\n\n/g, '<div style="height:12px"></div>')
-    .replace(/\n/g, "<br>");
-}
-
-const LANG_MAP: Record<string, Record<string, string>> = {
-  el: { placeholder: "Ρωτήστε τη GLAi...", thinking: "GLAi σκέφτεται...", empty: "Πώς μπορώ να βοηθήσω σήμερα;", disclaimer: "Η GLAi μπορεί να κάνει λάθη." },
-  en: { placeholder: "Ask GLAi anything...", thinking: "GLAi is thinking...", empty: "How can I help you today?", disclaimer: "GLAi can make mistakes." },
-  ru: { placeholder: "Спросите GLAi...", thinking: "GLAi думает...", empty: "Чем могу помочь сегодня?", disclaimer: "GLAi может ошибаться." },
-};
-
-function detectLang(): string {
-  const lang = navigator.language.split("-")[0];
-  return LANG_MAP[lang] ? lang : "en";
-}
-
-function TypingDots({ color }: { color: string }) {
-  return (
-    <div style={{ display: "flex", gap: "5px", alignItems: "center", padding: "4px 0" }}>
-      {[0, 1, 2].map(i => (
-        <motion.div
-          key={i}
-          style={{ width: 6, height: 6, borderRadius: "50%", background: color }}
-          animate={{ opacity: [0.2, 1, 0.2], y: [0, -4, 0] }}
-          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-        />
-      ))}
-    </div>
-  );
-}
+import { SideMenu } from "../components/home/SideMenu";
+import { Avatar } from "../components/ui/Avatar";
+import OwlIcon from "../components/home/OwlIcon";
 
 export default function ChatPage() {
-  const { id } = useParams();
   const navigate = useNavigate();
-  const { aiAccentColor, theme } = usePlan();
-  const lang = detectLang();
-  const t = LANG_MAP[lang];
-
+  const { theme, aiAccentColor, currentPlan, savePlan } = usePlan();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false); 
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: "ai", content: "Приветствую. Я GLAi — мудрость Афин в цифровой форме. Чем я могу быть полезен сегодня?" }
+  ]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
-
-  useEffect(() => {
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.style.height = "auto";
-      ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
-    }
-  }, [input]);
+  }, [messages, isLoading]);
 
   if (!theme) return null;
 
+  // РЕАЛЬНАЯ ЛОГИКА ОТВЕТА GEMINI
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: input.trim() };
+    const userMessage = { role: "user", content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-    setIsTyping(true);
 
     try {
-      let hasStarted = false;
-      await sendToAI(
-        { messages: [...messages, userMessage], mode: id },
-        (chunk) => {
-          if (!hasStarted) {
-            hasStarted = true;
-            setIsTyping(false);
-            setMessages(prev => [...prev, { role: "ai", content: "" }]);
-          }
-          setMessages(prev => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "ai") {
-              return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
-            }
-            return prev;
-          });
-        }
-      );
+      // Инициализация API ключа из вашего .env
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      // Формирование истории чата для контекста
+      const chat = model.startChat({
+        history: messages.map(msg => ({
+          role: msg.role === "ai" ? "model" : "user",
+          parts: [{ text: msg.content }],
+        })),
+      });
+
+      const result = await chat.sendMessage(input);
+      const response = await result.response;
+      const text = response.text();
+
+      setMessages(prev => [...prev, { role: "ai", content: text }]);
     } catch (error) {
-      setIsTyping(false);
-      setMessages(prev => [...prev, { role: "ai", content: "Error. Please try again." }]);
+      console.error("API Error:", error);
+      setMessages(prev => [...prev, { 
+        role: "ai", 
+        content: "Критическая ошибка связи с ядром. Проверьте настройки API в .env или лимиты плана." 
+      }]);
     } finally {
       setIsLoading(false);
-      setIsTyping(false);
     }
   };
 
   return (
     <main style={{
       width: "100vw", height: "100vh", minHeight: "100dvh",
-      background: theme.bgBase, display: "flex", position: "relative", overflow: "hidden"
+      background: "#0D121F", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "flex-start",
+      position: "relative", overflow: "hidden", fontFamily: "'Montserrat', sans-serif"
     }}>
       <style>{`
-        .chat-input:focus { border-color: ${aiAccentColor} !important; outline: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
-        .msg-ai a { color: ${aiAccentColor}; text-decoration: underline; }
-        @media (max-width: 1024px) { .desktop-sidebar { display: none; } }
+        body { margin: 0; padding: 0; background: #0D121F; }
+        .chat-scroll::-webkit-scrollbar { width: 4px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        
+        @keyframes avatarPulse {
+          0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 2px ${aiAccentColor}66); }
+          50% { transform: scale(1.02); opacity: 0.8; filter: drop-shadow(0 0 10px ${aiAccentColor}aa); }
+        }
+        .live-avatar { animation: avatarPulse 3s infinite ease-in-out; cursor: pointer; }
+
+        @keyframes typing {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+        .typing-dot { animation: typing 1s infinite; margin-right: 4px; }
+
+        .back-nav-container { display: flex; align-items: center; cursor: pointer; transition: opacity 0.2s; }
+        .back-nav-container:hover { opacity: 0.6; }
+        .premium-arrow-icon { color: white; display: flex; align-items: center; opacity: 0.6; margin-right: 12px; }
       `}</style>
 
-      {/* FIXED SIDEBAR CALL */}
-      <div className="desktop-sidebar">
+      <div style={{ zIndex: 100 }}>
         <Sidebar onMenuClick={() => setIsMenuOpen(true)} />
       </div>
 
       <AnimatePresence>
-        {isMenuOpen && <SideMenu onClose={() => setIsMenuOpen(false)} />}
+        {isMenuOpen && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 50000 }}>
+            <SideMenu onClose={() => setIsMenuOpen(false)} />
+          </div>
+        )}
       </AnimatePresence>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header style={{
-          padding: "15px 25px", borderBottom: "1px solid rgba(255,255,255,0.05)",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          background: "rgba(0,0,0,0.2)", backdropFilter: "blur(10px)", zIndex: 10
-        }}>
-          <div onClick={() => navigate("/")} style={{ cursor: "pointer", color: "white", opacity: 0.4, fontSize: "11px", fontWeight: 900, letterSpacing: "1px" }}>
-            ← BACK
+      <header translate="no" style={{
+        width: "100%", padding: "32px 40px 32px 85px", 
+        display: "flex", justifyContent: "space-between", 
+        alignItems: "center", zIndex: 10, boxSizing: "border-box"
+      }}>
+        <div className="back-nav-container" onClick={() => navigate("/")}>
+          <div className="premium-arrow-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
           </div>
-          <div style={{ color: "white", fontWeight: 950, letterSpacing: "4px", fontSize: "14px" }}>
-            GL<span style={{ color: aiAccentColor }}>Ai</span>{" "}
-            <span style={{ opacity: 0.5 }}>{id?.toUpperCase()}</span>
+          <div style={{ display: "flex", alignItems: "center", height: "32px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", fontSize: "22px", letterSpacing: "0.15em", lineHeight: "1", userSelect: "none" }}>
+              <span style={{ fontWeight: 800, color: "white", textTransform: "uppercase" }}>GL</span>
+              <span style={{ color: aiAccentColor, fontWeight: 400, marginLeft: "6px" }}>Ai</span>
+            </div>
           </div>
-          <div onClick={() => setIsMenuOpen(true)} style={{ cursor: "pointer", display: "flex", gap: "4px", padding: "8px" }}>
-            {[0,1,2].map(i => <div key={i} style={{ width: "4px", height: "4px", borderRadius: "50%", background: "white", opacity: 0.6 }} />)}
-          </div>
-        </header>
+        </div>
+        <div className="live-avatar">
+          <Avatar onClick={() => setIsSubModalOpen(true)} />
+        </div>
+      </header>
 
-        <div ref={scrollRef} className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "30px 20px" }}>
-          <div style={{ maxWidth: "760px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
-            {messages.length === 0 && !isTyping && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", marginTop: "12vh" }}>
-                <div style={{ fontSize: "28px", marginBottom: "14px" }}>🦉</div>
-                <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "14px", fontWeight: 300 }}>{t.empty}</div>
-              </motion.div>
-            )}
-
+      <div style={{ flex: 1, width: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div ref={scrollRef} className="chat-scroll" style={{ flex: 1, overflowY: "auto", padding: "20px 0" }}>
+          <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 20px" }}>
             {messages.map((msg, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ alignSelf: msg.role === "user" ? "flex-end" : "flex-start", maxWidth: "88%" }}>
-                {msg.role === "user" ? (
-                  <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", padding: "12px 18px", borderRadius: "18px 18px 4px 18px", color: "rgba(255,255,255,0.9)", fontSize: "15px" }}>
-                    {msg.content}
-                  </div>
-                ) : (
-                  <div className="msg-ai" style={{ color: "rgba(255,255,255,0.85)", fontSize: "15px", lineHeight: 1.75 }} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
-                )}
-              </motion.div>
+              <div key={i} style={{ display: "flex", gap: "24px", marginBottom: "44px", alignItems: "flex-start" }}>
+                <div className="live-avatar" style={{ 
+                  width: "38px", height: "38px", borderRadius: "10px", 
+                  background: msg.role === "ai" ? "#161B2E" : aiAccentColor,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1px solid ${aiAccentColor}44`
+                }}>
+                  {msg.role === "ai" ? <OwlIcon size="20px" color={aiAccentColor} /> : <span style={{ color: "black", fontWeight: 900, fontSize: "12px" }}>U</span>}
+                </div>
+                <div style={{ color: "#E3E3E3", fontSize: "16px", lineHeight: "1.7", fontWeight: 400 }}>
+                  {msg.content}
+                </div>
+              </div>
             ))}
-
-            <AnimatePresence>
-              {isTyping && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ alignSelf: "flex-start" }}>
-                  <TypingDots color={aiAccentColor} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
+            {isLoading && (
+              <div style={{ display: "flex", gap: "24px", marginBottom: "44px", alignItems: "flex-start" }}>
+                <div className="live-avatar" style={{ width: "38px", height: "38px", borderRadius: "10px", background: "#161B2E", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${aiAccentColor}44` }}>
+                  <OwlIcon size="20px" color={aiAccentColor} />
+                </div>
+                <div style={{ display: "flex", paddingTop: "10px" }}>
+                  <span className="typing-dot" style={{ color: aiAccentColor }}>●</span>
+                  <span className="typing-dot" style={{ color: aiAccentColor, animationDelay: "0.2s" }}>●</span>
+                  <span className="typing-dot" style={{ color: aiAccentColor, animationDelay: "0.4s" }}>●</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={{ padding: "16px 20px 20px", background: `linear-gradient(to top, ${theme.bgBase} 80%, transparent)`, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-          <div style={{ maxWidth: "760px", margin: "0 auto", display: "flex", alignItems: "flex-end", gap: "12px" }}>
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              className="chat-input"
-              placeholder={t.placeholder}
-              style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: "13px 18px", color: "white", resize: "none", fontSize: "14px" }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={isLoading || !input.trim()}
-              style={{ background: input.trim() && !isLoading ? aiAccentColor : "rgba(255,255,255,0.06)", border: "none", borderRadius: "50%", width: "44px", height: "44px", color: input.trim() && !isLoading ? "black" : "rgba(255,255,255,0.3)", cursor: input.trim() && !isLoading ? "pointer" : "default", transition: "all 0.25s", display: "flex", alignItems: "center", justifyContent: "center" }}
-            >
-              ↑
-            </button>
+        <div style={{ padding: "20px 0 60px 0" }}>
+          <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 20px" }}>
+            <div style={{ background: "#161B2E", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "24px", display: "flex", alignItems: "flex-end", padding: "12px 16px", boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={isLoading}
+                placeholder={isLoading ? "GLAi обрабатывает запрос..." : "Спроси сову Афины..."}
+                style={{ flex: 1, minHeight: "24px", maxHeight: "200px", background: "transparent", border: "none", padding: "8px 10px", color: "white", fontFamily: "inherit", fontSize: "16px", resize: "none", lineHeight: "1.5", outline: "none", opacity: isLoading ? 0.5 : 1 }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              />
+              <button onClick={handleSend} disabled={!input.trim() || isLoading} style={{ background: input.trim() && !isLoading ? "white" : "rgba(255,255,255,0.1)", border: "none", borderRadius: "12px", width: "36px", height: "36px", cursor: "pointer", color: "black", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: "20px", fontWeight: "bold" }}>↑</span>
+              </button>
+            </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: "10px", fontSize: "9px", color: "rgba(255,255,255,0.12)" }}>{t.disclaimer}</div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isSubModalOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSubModalOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", zIndex: 60000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(20px)" }}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} onClick={e => e.stopPropagation()} style={{ background: "#0c121d", width: "360px", borderRadius: "40px", padding: "50px 40px", border: `1px solid rgba(255,255,255,0.05)` }}>
+              <h3 style={{ color: "white", textAlign: "center", marginBottom: "30px", fontSize: "11px", fontWeight: 900, letterSpacing: "4px", opacity: 0.5 }}>SELECT SYSTEM PLAN</h3>
+              {(["free", "pro"] as Plan[]).map(p => (
+                <div key={p} onClick={() => { savePlan(p); setIsSubModalOpen(false); }} style={{ padding: "20px", marginBottom: "15px", borderRadius: "20px", border: "1px solid rgba(255, 255, 255, 0.1)", color: "white", textAlign: "center", cursor: "pointer", background: currentPlan === p ? (p === 'pro' ? '#FFD70015' : '#007BFF15') : "rgba(255,255,255,0.02)", borderColor: currentPlan === p ? (p === 'pro' ? '#FFD700' : '#007BFF') : "rgba(255, 255, 255, 0.1)" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 950, letterSpacing: "2px" }}>{p === 'free' ? 'LIMIT (FREE)' : 'UNLIMIT (PRO)'}</span>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
