@@ -6,7 +6,7 @@ import { SideMenu } from "../components/home/SideMenu";
 import { Sidebar } from "../components/home/Sidebar";
 import { HomeHeader } from "../components/home/HomeHeader";
 import { Hero } from "../components/home/Hero";
-import { Footer } from "../components/home/Footer";
+import { Footer } from "./../components/home/Footer"; // Импорт нового футера
 import { HOME_LOCALE } from "../constants/translations";
 
 export default function HomePage() {
@@ -17,12 +17,10 @@ export default function HomePage() {
 
   useEffect(() => {
     const browserLang = navigator.language.split("-")[0];
-    // Исправление ошибки 7053: безопасная проверка наличия ключа в словаре
     const finalLang = browserLang in HOME_LOCALE ? browserLang : "el";
     setLang(finalLang);
   }, []);
 
-  // МАСТЕР-ЦВЕТ: Единственный источник истины для всех акцентов страницы
   const activeAccentColor = useMemo(() => {
     return (currentPlan === "pro" || currentPlan === "plus") ? "#FFD700" : "#007BFF";
   }, [currentPlan]);
@@ -35,7 +33,6 @@ export default function HomePage() {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
       position: "relative", overflow: "hidden"
     }}>
-      {/* Фоновое свечение (Glow) */}
       <div style={{
         position: "absolute", top: "40%", left: "50%", transform: "translate(-50%, -50%)",
         width: "80vw", height: "80vw", background: `radial-gradient(circle, ${activeAccentColor}08 0%, transparent 65%)`,
@@ -46,12 +43,13 @@ export default function HomePage() {
         body { margin: 0; padding: 0; background: ${theme.bgBase}; -webkit-font-smoothing: antialiased; }
         @keyframes aiTextPulse {
           0%, 100% { opacity: 1; filter: drop-shadow(0 0 5px ${activeAccentColor}aa); }
-          50% { opacity: 0.7; filter: drop-shadow(0 0 15px ${activeAccentColor}); }
+          50% { opacity: 0.7; filter: drop-shadow(0 0 10px ${activeAccentColor}); }
         }
         .ai-pulse-text { 
           animation: aiTextPulse 4s infinite ease-in-out; 
           color: ${activeAccentColor} !important; 
           font-weight: 950;
+          transition: color 0.4s ease;
         }
       `}</style>
 
@@ -67,7 +65,8 @@ export default function HomePage() {
 
       <Hero lang={lang} accentColor={activeAccentColor} />
 
-      <Footer accentColor={activeAccentColor} lang={lang} />
+      {/* ФИНАЛЬНЫЙ ФУТЕР */}
+      <Footer lang={lang} />
 
       <AnimatePresence>
         {isSubModalOpen && (

@@ -9,13 +9,11 @@ interface AvatarProps {
 export const Avatar: React.FC<AvatarProps> = ({ onClick, size = 42 }) => {
   const { currentPlan } = usePlan();
   
-  // ЕДИНСТВЕННЫЙ ИСТОЧНИК ПРАВДЫ: Константы определяются мгновенно
   const isPro = currentPlan === "pro" || currentPlan === "plus";
   const activeColor = isPro ? "#FFD700" : "#007BFF"; 
   const statusLabel = isPro ? "PRO" : "FREE";
 
   return (
-    /* key={currentPlan} — ГАРАНТИЯ того, что аватар переродится при смене плана */
     <div key={currentPlan} style={{ position: "relative" }}>
       <style>{`
         @keyframes avatarPulseSystem {
@@ -25,7 +23,6 @@ export const Avatar: React.FC<AvatarProps> = ({ onClick, size = 42 }) => {
             transform: scale(1);
           }
           50% {
-            /* Пульсация +30%: размах тени 38px, масштаб 1.08 */
             box-shadow: 0 0 38px 18px ${activeColor}33; 
             border-color: ${activeColor};
             transform: scale(1.08);
