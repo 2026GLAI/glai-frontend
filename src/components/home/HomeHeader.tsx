@@ -1,5 +1,4 @@
 import React from "react";
-import OwlIcon from "./OwlIcon";
 import { Avatar } from "../ui/Avatar";
 import { usePlan } from "../../hooks/usePlan";
 
@@ -8,26 +7,60 @@ interface Props {
 }
 
 export const HomeHeader: React.FC<Props> = ({ onAvatarClick }) => {
-  const { currentPlan } = usePlan();
-  const isPro = currentPlan === "pro" || currentPlan === "plus";
-  const statusColor = isPro ? "#FFD700" : "#007BFF";
+  const { aiAccentColor } = usePlan();
 
   return (
-    <header translate="no" className="main-header" style={{
-      width: "100%", padding: "30px 40px", display: "flex", 
-      justifyContent: "space-between", alignItems: "center", zIndex: 10, boxSizing: "border-box"
+    <header translate="no" style={{
+      width: "100%",
+      // 32px сверху для идеального выравнивания с центром совы в сайдбаре
+      padding: "32px 40px 32px 110px", 
+      display: "flex", 
+      justifyContent: "space-between", 
+      alignItems: "center", 
+      zIndex: 10, 
+      boxSizing: "border-box"
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-        <div style={{ filter: `drop-shadow(0 0 8px ${statusColor}44)` }}>
-          <OwlIcon size="28px" color="white" />
-        </div>
-        <div style={{ width: "1px", height: "20px", background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent)" }} />
-        <div style={{ fontSize: 22, fontWeight: 900, color: "white", letterSpacing: "5px" }}>
-          GL<span className="ai-pulse-text" style={{ color: statusColor }}>Ai</span>
+      {/* Контейнер логотипа */}
+      <div style={{ display: "flex", alignItems: "baseline", height: "32px" }}>
+        <div style={{ 
+          display: "flex",
+          alignItems: "baseline",
+          fontSize: "26px", // Чуть крупнее для солидности
+          letterSpacing: "-0.5px", // Отрицательный кернинг для премиального вида
+          lineHeight: "1",
+          cursor: "default",
+          userSelect: "none"
+        }}>
+          {/* Массивный GL */}
+          <span style={{ 
+            fontWeight: 950, // Максимальный вес
+            color: "white",
+            textTransform: "uppercase"
+          }}>
+            GL
+          </span>
+
+          {/* Технологичный Ai */}
+          <span 
+            className="ai-pulse-text" 
+            style={{ 
+              color: aiAccentColor,
+              fontWeight: 300, // Контрастная легкость
+              marginLeft: "1px",
+              // Тень создает эффект неоновой трубки
+              textShadow: `
+                0 0 10px ${aiAccentColor}66,
+                0 0 20px ${aiAccentColor}33
+              `
+            }}
+          >
+            Ai
+          </span>
         </div>
       </div>
       
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      {/* Правая часть: Аватар */}
+      <div style={{ display: "flex", alignItems: "center" }}>
         <Avatar onClick={onAvatarClick} />
       </div>
     </header>

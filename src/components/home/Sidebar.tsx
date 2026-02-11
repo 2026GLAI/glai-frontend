@@ -1,68 +1,67 @@
-import { motion } from "framer-motion";
+import React from "react";
 import OwlIcon from "./OwlIcon";
+import { usePlan } from "../../hooks/usePlan";
 
 interface SidebarProps {
-  onInfoClick: () => void;
-  accentColor: string;
+  onMenuClick: () => void;
 }
 
-export const Sidebar = ({ onInfoClick, accentColor }: SidebarProps) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onMenuClick }) => {
+  const { aiAccentColor } = usePlan();
+
   return (
-    <motion.nav 
-      initial={{ x: -70 }}
-      animate={{ x: 0 }}
-      style={{
-        position: "fixed", left: 0, top: 0, height: "100vh", width: "70px",
-        background: "rgba(5, 10, 15, 0.4)", borderRight: "1px solid rgba(255,255,255,0.05)",
-        display: "flex", flexDirection: "column", alignItems: "center",
-        padding: "30px 0", zIndex: 100, backdropFilter: "blur(10px)"
-      }} className="desktop-only"
-    >
-      <style>{`
-        @media (max-width: 1024px) { .desktop-only { display: none !important; } }
-        .sidebar-icon { 
-          width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
-          border-radius: 12px; cursor: pointer; transition: all 0.3s ease; color: rgba(255,255,255,0.4);
-          margin-bottom: 25px;
-        }
-        .sidebar-icon:hover { background: rgba(255,255,255,0.05); color: white; }
-        .sidebar-bottom { 
-          margin-top: auto; 
-          padding-bottom: calc(20px + env(safe-area-inset-bottom));
-        }
-        .icon-pulse-active {
-          box-shadow: 0 0 15px ${accentColor}22;
-          border: 1px solid ${accentColor}44 !important;
-        }
-      `}</style>
-
-      {/* Логотип системы */}
-      <div className="sidebar-icon" style={{ color: "white", cursor: "default" }}>
-        <OwlIcon size="30px" color="white" />
+    <aside style={{
+      width: "70px",
+      height: "100vh",
+      background: "rgba(5, 10, 20, 0.8)",
+      backdropFilter: "blur(20px)",
+      borderRight: "1px solid rgba(255,255,255,0.05)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "30px 0", // Совпадает с вертикальным паддингом хедера
+      position: "fixed",
+      left: 0,
+      top: 0,
+      zIndex: 100
+    }}>
+      {/* Центрированный логотип */}
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center",
+        height: "32px", // Фиксированная высота для совпадения с линией текста
+        filter: `drop-shadow(0 0 5px ${aiAccentColor}44)` 
+      }}>
+        <OwlIcon size="24px" color="white" />
       </div>
 
-      {/* Быстрое действие: Новый чат */}
-      <div className="sidebar-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-      </div>
+      <button
+        onClick={onMenuClick}
+        style={{
+          width: "40px",
+          height: "40px",
+          borderRadius: "12px",
+          background: "rgba(255,255,255,0.03)",
+          border: `1px solid ${aiAccentColor}44`,
+          cursor: "pointer",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "4px",
+          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: `0 0 15px ${aiAccentColor}11`,
+          marginBottom: "40px" // Сдвигаем кнопку чуть выше от низа
+        }}
+      >
+        <div style={{ width: "18px", height: "2px", background: aiAccentColor, borderRadius: "2px" }} />
+        <div style={{ width: "12px", height: "2px", background: aiAccentColor, borderRadius: "2px" }} />
+        <div style={{ width: "18px", height: "2px", background: aiAccentColor, borderRadius: "2px" }} />
+      </button>
 
-      <div className="sidebar-bottom">
-        {/* Кнопка вызова Панели Управления SideMenu */}
-        <div 
-          className="sidebar-icon icon-pulse-active" 
-          onClick={onInfoClick}
-        >
-          <span style={{ 
-            fontFamily: "serif", 
-            fontStyle: "italic", 
-            fontSize: "20px", 
-            color: accentColor,
-            textShadow: `0 0 8px ${accentColor}66` 
-          }}>i</span>
-        </div>
-      </div>
-    </motion.nav>
+      <div style={{ height: "32px" }} />
+    </aside>
   );
 };

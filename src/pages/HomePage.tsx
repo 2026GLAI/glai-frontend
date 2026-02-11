@@ -6,7 +6,7 @@ import { SideMenu } from "../components/home/SideMenu";
 import { Sidebar } from "../components/home/Sidebar";
 import { HomeHeader } from "../components/home/HomeHeader";
 import { Hero } from "../components/home/Hero";
-import { Footer } from "./../components/home/Footer"; // Импорт нового футера
+import { Footer } from "./../components/home/Footer";
 import { HOME_LOCALE } from "../constants/translations";
 
 export default function HomePage() {
@@ -53,8 +53,9 @@ export default function HomePage() {
         }
       `}</style>
 
+      {/* ИСПРАВЛЕННЫЙ БЛОК: Sidebar теперь соответствует новым SidebarProps */}
       <div className="desktop-sidebar" style={{ zIndex: 20 }}>
-        <Sidebar onInfoClick={() => setIsMenuOpen(true)} accentColor={activeAccentColor} />
+        <Sidebar onMenuClick={() => setIsMenuOpen(true)} />
       </div>
 
       <AnimatePresence>
@@ -65,7 +66,6 @@ export default function HomePage() {
 
       <Hero lang={lang} accentColor={activeAccentColor} />
 
-      {/* ФИНАЛЬНЫЙ ФУТЕР */}
       <Footer lang={lang} />
 
       <AnimatePresence>
